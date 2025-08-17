@@ -1,0 +1,107 @@
+-- LocalScript (StarterGui)
+
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ControlGui"
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Create Lock Button
+local lockBtn = Instance.new("TextButton")
+lockBtn.Size = UDim2.new(0, 120, 0, 40)
+lockBtn.Position = UDim2.new(0.5, -60, 0.5, -25) -- centered vertically, slightly up
+lockBtn.Text = "Lock"
+lockBtn.Parent = screenGui
+lockBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 255)
+lockBtn.TextColor3 = Color3.new(1,1,1)
+lockBtn.Font = Enum.Font.SourceSansBold
+lockBtn.TextSize = 20
+
+-- Create Noclip Button
+local noclipBtn = Instance.new("TextButton")
+noclipBtn.Size = UDim2.new(0, 120, 0, 40)
+noclipBtn.Position = UDim2.new(0.5, -60, 0.5, 25) -- below lock button
+noclipBtn.Text = "Noclip OFF"
+noclipBtn.Parent = screenGui
+noclipBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+noclipBtn.TextColor3 = Color3.new(1,1,1)
+noclipBtn.Font = Enum.Font.SourceSansBold
+noclipBtn.TextSize = 20
+
+-- Variables
+local player = game.Players.LocalPlayer
+local hrp = player.Character:WaitForChild("HumanoidRootPart")
+local locked = false
+local savedPosition
+local noclip = false
+local RunService = game:GetService("RunService")
+local safeDistance = 3 -- max allowed drift before restoring position
+
+-- Lock functions
+local function lockPosition()
+	if not locked then
+		savedPosition = hrp.CFrame
+		locked = true
+		lockBtn.Text = "Unlock"
+	end
+end
+
+local function unlockPosition()
+	if locked then
+		locked = false
+		lockBtn.Text = "Lock"
+	end
+end
+
+-- Button click toggle (Lock)
+lockBtn.MouseButton1Click:Connect(function()
+	if locked then
+		unlockPosition()
+	else
+		lockPosition()
+	end
+end)
+
+-- Safe lock logic: only restore if drifting too far
+RunService.Heartbeat:Connect(function()
+	if locked and player.Character and hrp then
+		local distance = (hrp.Position - savedPosition.Position).Magnitude
+		if distance > safeDistance then
+			hrp.CFrame = savedPosition
+			hrp.Velocity = Vector3.zero
+			hrp.RotVelocity = Vector3.zero
+		end
+	end
+end)
+
+-- Character respawn handling
+player.CharacterAdded:Connect(function(char)
+	hrp = char:WaitForChild("HumanoidRootPart")
+	locked = false
+	lockBtn.Text = "Lock"
+end)
+
+-- Noclip function
+local function noclipStep()
+	if noclip and player.Character then
+		for _, part in pairs(player.Character:GetDescendants()) do
+			if part:IsA("BasePart") and part.CanCollide then
+				part.CanCollide = false
+			end
+		end
+	end
+end
+
+-- Bind noclip to Heartbeat
+RunService.Heartbeat:Connect(noclipStep)
+
+-- Button click toggle (Noclip)
+noclipBtn.MouseButton1Click:Connect(function()
+	noclip = not noclip
+	if noclip then
+		noclipBtn.Text = "Noclip ON"
+		noclipBtn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		noclipBtn.Text = "Noclip OFF"
+		noclipBtn.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+	end
+end)
