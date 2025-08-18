@@ -1,0 +1,52 @@
+-- Roblox Safe Position Lock with Distance Threshold
+-- Locks you in place but only snaps back if you drift too far (anti-cheat friendly)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local savedCFrame = nil
+local locked = false
+local threshold = 5 -- studs allowed before correction
+
+-- Lock character and apply safe correction
+local function LockCharacter(char)
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    if not savedCFrame then
+        savedCFrame = hrp.CFrame
+        locked = true
+        print("✅ Safe Lock enabled at:", savedCFrame.Position)
+    end
+
+    RunService.Heartbeat:Connect(function()
+        if locked and savedCFrame then
+            local currentPos = hrp.Position
+            local savedPos = savedCFrame.Position
+
+            -- Only correct if too far away
+            if (currentPos - savedPos).Magnitude > threshold then
+                hrp.CFrame = savedCFrame
+                print("↩️ Snapped back to locked position")
+            end
+        end
+    end)
+end
+
+-- Handle respawn
+if player.Character then
+    LockCharacter(player.Character)
+end
+
+player.CharacterAdded:Connect(function(char)
+    LockCharacter(char)
+end)
+
+-- Unlock with U key
+game:GetService("UserInputService").InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.U then
+        locked = false
+        print("🔓 Safe lock disabled.")
+    end
+end)
