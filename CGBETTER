@@ -1,0 +1,60 @@
+-- ✅ Combined Script: Queue Join + Safe Position Lock (5s delay each)
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+
+-- Lock system variables
+local locked = false
+local savedCFrame = nil
+local hrp = nil
+local threshold = 5   -- studs allowed before correction
+local delayTime = 5   -- seconds before locking/joining
+
+---------------------------------------------------------------------
+-- 🔹 Function: Lock character safely after 5s
+---------------------------------------------------------------------
+local function LockCharacter(char)
+    hrp = char:WaitForChild("HumanoidRootPart")
+    locked, savedCFrame = false, nil
+
+    task.delay(delayTime, function()
+        if hrp and hrp.Parent then
+            savedCFrame = hrp.CFrame
+            locked = true
+            print("✅ Safe Lock enabled at:", savedCFrame.Position, "(after "..delayTime.."s)")
+        end
+    end)
+end
+
+---------------------------------------------------------------------
+-- 🔹 Heartbeat loop (runs once, permanent check)
+---------------------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+    if locked and hrp and savedCFrame then
+        local currentPos = hrp.Position
+        local savedPos = savedCFrame.Position
+        if (currentPos - savedPos).Magnitude > threshold then
+            hrp.CFrame = savedCFrame
+        end
+    end
+end)
+
+---------------------------------------------------------------------
+-- 🔹 Queue joiner (after 5s)
+---------------------------------------------------------------------
+task.delay(delayTime, function()
+    local args = { "JoinQueue", "CULLING GAMES" }
+    ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Team"):FireServer(unpack(args))
+    print("🚀 Joined Queue (after "..delayTime.."s)")
+end)
+
+---------------------------------------------------------------------
+-- 🔹 Apply lock to current & future characters
+---------------------------------------------------------------------
+if player.Character then
+    LockCharacter(player.Character)
+end
+player.CharacterAdded:Connect(LockCharacter)
